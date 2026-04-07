@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(USER)
+  expenses  Expense[]
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  metadata      Json? // future flag
+  @@index([email])
+}
+
+model Tag {
+  id     String   @id @default(uuid())
+  name   String
+  color  String   @default("#B2BEB5")
+  expenses Expense[]
+  metadata      Json? // future flag
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  title       String
+  amount      Decimal  @db.Decimal(10, 2)
+  currency    String   @default("INR")
+  notes       String?
+  expenseDate DateTime
+  userId String
+  tagId  String?
+  metadata      Json? // future flag
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag  Tag?  @relation(fields: [tagId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+  @@index([tagId])
+  @@index([expenseDate])
+}
