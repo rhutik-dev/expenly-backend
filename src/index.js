@@ -41,3 +41,5 @@ process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
     gracefulShutdown('uncaughtException');
 });
+
+export default server;
