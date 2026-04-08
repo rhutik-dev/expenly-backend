@@ -2,44 +2,47 @@ import 'dotenv/config';
 import app from './app.js';
 import prisma from './config/db.js';
 
-const PORT = process.env.PORT || 3000;
+// Export app for Vercel serverless
+export default app;
 
-// Start the server
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Only start server in local development (not in Vercel)
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
 
-// Graceful shutdown handler
-const gracefulShutdown = async (signal) => {
-    console.log(`\n${signal} received. Starting graceful shutdown...`);
-
-    server.close(async () => {
-        console.log('HTTP server closed');
-
-        try {
-            await prisma.$disconnect();
-            console.log('Database connection closed');
-        } catch (error) {
-            console.error('Error closing database connection:', error);
-        }
-
-        process.exit(0);
+    const server = app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
     });
 
-    // Force shutdown after 30 seconds
-    setTimeout(() => {
-        console.error('Forced shutdown after timeout');
-        process.exit(1);
-    }, 30000);
-};
+    // Graceful shutdown handler
+    const gracefulShutdown = async (signal) => {
+        console.log(`\n${signal} received. Starting graceful shutdown...`);
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        server.close(async () => {
+            console.log('HTTP server closed');
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-    gracefulShutdown('uncaughtException');
-});
+            try {
+                await prisma.$disconnect();
+                console.log('Database connection closed');
+            } catch (error) {
+                console.error('Error closing database connection:', error);
+            }
 
-export default server;
+            process.exit(0);
+        });
+
+        // Force shutdown after 30 seconds
+        setTimeout(() => {
+            console.error('Forced shutdown after timeout');
+            process.exit(1);
+        }, 30000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+        console.error('Uncaught Exception:', error);
+        gracefulShutdown('uncaughtException');
+    });
+}
