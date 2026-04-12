@@ -1,4 +1,5 @@
 import { sendResponse } from "../../utils/response.js";
+import logger from "../../utils/logger.js";
 import { sendChatMessage } from "./chatbot.service.js";
 
 /**
@@ -32,7 +33,7 @@ export const chatController = async (req, res) => {
 
     return sendResponse(res, 200, true, "Message processed successfully", result.data);
   } catch (error) {
-    console.error("Error in chat controller:", error.message);
+    logger.error("CHATBOT_CONTROLLER", "Error in chat controller", error);
     return sendResponse(res, 500, false, "Internal server error");
   }
 };

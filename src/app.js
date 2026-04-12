@@ -2,29 +2,18 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import winston from 'winston';
 import { jsonSender } from './utils/response.js';
+import logger from './utils/logger.js';
 import routes from './routes.js';
 
 const app = express();
-
-// Configure Winston logger
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    }),
-  ],
-});
 
 // Security middleware
 app.use(helmet()); // Add security headers
 
 // CORS middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5174',
   credentials: true,
 }));
 
@@ -44,13 +33,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
-app.use((req, _, next) => {
-  logger.info({
-    method: req.method,
-    path: req.path,
-    ip: req.ip,
-    timestamp: new Date().toISOString(),
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  // Log response when it's sent
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.request(req.method, req.path, res.statusCode, duration);
   });
+
   next();
 });
 
@@ -75,12 +66,7 @@ app.use((_req, res) => {
 
 // Global error handler
 app.use((err, req, res) => {
-  logger.error({
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-  });
+  logger.error('SERVER', 'Request error', err);
 
   // Default error response
   const statusCode = err.statusCode || 500;

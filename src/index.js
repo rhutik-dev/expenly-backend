@@ -1,30 +1,31 @@
 import 'dotenv/config';
 import app from './app.js';
 import prisma from './config/db.js';
+import logger from './utils/logger.js';
 
 // Export app for Vercel serverless
 export default app;
 
 // Only start server in local development (not in Vercel)
 if (process.env.NODE_ENV !== 'production') {
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 5000;
 
     const server = app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
+        logger.success('SERVER', `Server is running on http://localhost:${PORT}`);
     });
 
     // Graceful shutdown handler
     const gracefulShutdown = async (signal) => {
-        console.log(`\n${signal} received. Starting graceful shutdown...`);
+        logger.warn('SERVER', `${signal} received. Starting graceful shutdown...`);
 
         server.close(async () => {
-            console.log('HTTP server closed');
+            logger.info('SERVER', 'HTTP server closed');
 
             try {
                 await prisma.$disconnect();
-                console.log('Database connection closed');
+                logger.success('DATABASE', 'Database connection closed');
             } catch (error) {
-                console.error('Error closing database connection:', error);
+                logger.error('DATABASE', 'Error closing database connection', error);
             }
 
             process.exit(0);
@@ -32,7 +33,7 @@ if (process.env.NODE_ENV !== 'production') {
 
         // Force shutdown after 30 seconds
         setTimeout(() => {
-            console.error('Forced shutdown after timeout');
+            logger.error('SERVER', 'Forced shutdown after timeout');
             process.exit(1);
         }, 30000);
     };
@@ -42,7 +43,7 @@ if (process.env.NODE_ENV !== 'production') {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-        console.error('Uncaught Exception:', error);
+        logger.error('SERVER', 'Uncaught Exception', error);
         gracefulShutdown('uncaughtException');
     });
 }
