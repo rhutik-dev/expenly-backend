@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { formatResponse } from "../../utils/response.js";
+import logger from "../../utils/logger.js";
 import prisma from "../../config/db.js";
 
 /**
@@ -62,8 +63,26 @@ export const sendChatMessage = async ({ message, userId, conversationHistory = [
     // Initialize Groq
     const groq = initializeGroq();
 
-    // Build messages array with conversation history
+    // System prompt with expense context
+    const systemPrompt = `You are a personal expense tracker assistant. Help users understand their spending, categorize expenses, and provide financial insights.
+You are friendly, helpful, and knowledgeable about personal finance.
+When users ask about their expenses, provide specific insights based on their expense data.
+Keep responses concise and actionable.
+
+IMPORTANT: Format your responses as follows:
+- Use numbered lists for rankings, each item on a new line
+- Use bold markdown for category names: **Category Name**
+- Add blank lines between sections
+- Example format:
+  1. **Rent**: ₹5,000 (41% of total)
+  2. **Transport**: ₹4,578 (38% of total)
+  3. **Food & Dining**: ₹2,500 (21% of total)
+
+${expenseContext}`;
+
+    // Build messages array with conversation history and system prompt
     const messages = [
+      { role: "system", content: systemPrompt },
       ...conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,
@@ -71,17 +90,10 @@ export const sendChatMessage = async ({ message, userId, conversationHistory = [
       { role: "user", content: message },
     ];
 
-    // System prompt with expense context
-    const systemPrompt = `You are a personal expense tracker assistant. Help users understand their spending, categorize expenses, and provide financial insights.
-You are friendly, helpful, and knowledgeable about personal finance.
-When users ask about their expenses, provide specific insights based on their expense data.
-Keep responses concise and actionable.${expenseContext}`;
-
     // Call Groq API
     const response = await groq.chat.completions.create({
       model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
       messages: messages,
-      system: systemPrompt,
       temperature: 0.7,
       max_tokens: 1024,
     });
@@ -97,7 +109,7 @@ Keep responses concise and actionable.${expenseContext}`;
       timestamp: new Date(),
     });
   } catch (error) {
-    console.error("Error sending chat message:", error.message);
+    logger.error("CHATBOT", "Error sending chat message", error);
     if (error.message.includes("API")) {
       return formatResponse(false, "AI service error. Please try again later.");
     }
