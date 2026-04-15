@@ -1,7 +1,13 @@
 import { generateToken } from "../../utils/jsonWebTokensHelper.js";
 import { sendCookie } from "../../utils/cookie.js";
 import { sendResponse } from "../../utils/response.js";
-import { registerUser, loginUser, getUserById as getUserByIdService } from "./user.service.js";
+import {
+  registerUser,
+  loginUser,
+  getUserById as getUserByIdService,
+  updateUserProfile,
+  changeUserPassword,
+} from "./user.service.js";
 
 /**
  * Controller for user registration
@@ -90,6 +96,59 @@ export const getUserById = async (req, res) => {
       return sendResponse(res, 404, false, error.message);
     }
 
+    return sendResponse(res, 500, false, "Internal server error");
+  }
+};
+
+/**
+ * Controller to update user profile
+ */
+export const updateUserProfileController = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user?.id !== id) {
+      return sendResponse(res, 403, false, "You can only update your own profile");
+    }
+
+    const result = await updateUserProfile(id, req.body || {});
+
+    if (!result.success) {
+      return sendResponse(res, 400, false, result.message);
+    }
+
+    return sendResponse(res, 200, true, result.message, result.data);
+  } catch (error) {
+    if (error.name === "ZodError") {
+      return sendResponse(res, 400, false, error.issues?.[0]?.message || "Validation failed");
+    }
+    console.error("Error updating profile:", error.message);
+    return sendResponse(res, 500, false, "Internal server error");
+  }
+};
+
+/**
+ * Controller to change user password
+ */
+export const changePasswordController = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return sendResponse(res, 401, false, "Unauthorized");
+    }
+
+    const result = await changeUserPassword(userId, req.body || {});
+
+    if (!result.success) {
+      return sendResponse(res, 400, false, result.message);
+    }
+
+    return sendResponse(res, 200, true, result.message);
+  } catch (error) {
+    if (error.name === "ZodError") {
+      return sendResponse(res, 400, false, error.issues?.[0]?.message || "Validation failed");
+    }
+    console.error("Error changing password:", error.message);
     return sendResponse(res, 500, false, "Internal server error");
   }
 };

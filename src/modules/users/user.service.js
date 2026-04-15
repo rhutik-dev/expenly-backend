@@ -100,6 +100,82 @@ export const loginUser = async (credentials) => {
   return formatResponse(true, "User logged in successfully", userWithoutPassword);
 };
 
+// Validation schema for profile update
+const updateProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  email: z.string().email("Invalid email format").optional(),
+});
+
+// Validation schema for password change
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+});
+
+/**
+ * Update user profile (name, email)
+ */
+export const updateUserProfile = async (userId, data) => {
+  const validated = updateProfileSchema.parse(data);
+
+  if (!validated.name && !validated.email) {
+    return formatResponse(false, "No fields to update");
+  }
+
+  if (validated.email) {
+    const existing = await prisma.user.findUnique({ where: { email: validated.email } });
+    if (existing && existing.id !== userId) {
+      return formatResponse(false, "Email already in use");
+    }
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: validated,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return formatResponse(true, "Profile updated successfully", user);
+};
+
+/**
+ * Change user password
+ */
+export const changeUserPassword = async (userId, data) => {
+  const { currentPassword, newPassword } = changePasswordSchema.parse(data);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, password: true },
+  });
+
+  if (!user) {
+    return formatResponse(false, "User not found");
+  }
+
+  const isValid = await bcryptjs.compare(currentPassword, user.password);
+  if (!isValid) {
+    return formatResponse(false, "Current password is incorrect");
+  }
+
+  const salt = await bcryptjs.genSalt(10);
+  const hashed = await bcryptjs.hash(newPassword, salt);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed },
+  });
+
+  return formatResponse(true, "Password changed successfully");
+};
+
 /**
  * Get user by ID
  * @param {string} userId - User ID
