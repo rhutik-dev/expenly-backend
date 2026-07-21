@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import 'dotenv/config'; // bootstrap environment variables from .env file
 import http from 'http';
 import app from './app.js';
 import prisma from './config/db.js';
