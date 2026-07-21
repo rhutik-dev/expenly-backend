@@ -1,7 +1,6 @@
 import userRouter from './modules/users/user.routes.js';
 import expenseRouter from './modules/expenses/expenses.routes.js';
 import tagRouter from './modules/tags/tag.routes.js';
-import chatbotRouter from './modules/chatbot/chatbot.routes.js';
 
 const routes = (app) => {
     // User routes
@@ -13,8 +12,7 @@ const routes = (app) => {
     // Tag routes
     app.use('/api/tags', tagRouter);
 
-    // Chatbot routes
-    app.use('/api/chatbot', chatbotRouter);
+    // Chat lives in the ws-backend service (WebSocket at /ws/chat).
 };
 
 export default routes;
